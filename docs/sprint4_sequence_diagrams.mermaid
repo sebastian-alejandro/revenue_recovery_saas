@@ -1,0 +1,73 @@
+sequenceDiagram
+    participant U as Usuario
+    participant FA as Flutter App
+    participant CF as Cloud Functions
+    participant FS as Firestore
+    participant SG as SendGrid API
+    participant TR as Template Renderer
+
+    Note over U,TR: 1. Crear Template de Email
+
+    U->>FA: Clic "Crear Template"
+    FA->>U: Muestra editor
+    U->>FA: Escribe contenido con variables
+    FA->>CF: createTemplate()
+    CF->>FS: Guardar en /templates
+    FS-->>CF: Template ID
+    CF-->>FA: Template creado
+    FA-->>U: Confirma creación
+
+    Note over U,TR: 2. Editor de Templates con Variables
+
+    U->>FA: Edita template existente
+    FA->>CF: getTemplate(id)
+    CF->>FS: Query template
+    FS-->>CF: Template data
+    CF-->>FA: Template content
+    FA-->>U: Carga en editor
+    U->>FA: Modifica con {{customer.name}}
+    FA->>CF: updateTemplate()
+    CF->>FS: Update template
+    FS-->>CF: Updated
+    CF-->>FA: Success
+    FA-->>U: Template guardado
+
+    Note over U,TR: 3. Preview de Email
+
+    U->>FA: Clic "Preview"
+    FA->>CF: previewTemplate()
+    CF->>FS: Get sample customer data
+    FS-->>CF: Customer info
+    CF->>TR: renderTemplate(template, customer)
+    TR->>TR: Replace variables
+    TR-->>CF: Rendered HTML
+    CF-->>FA: Preview HTML
+    FA-->>U: Modal con preview
+
+    Note over U,TR: 4. Envío de Email de Prueba
+
+    U->>FA: "Enviar prueba" + email
+    FA->>CF: sendTestEmail()
+    CF->>FS: Get template
+    FS-->>CF: Template data
+    CF->>TR: renderTemplate(template, testData)
+    TR-->>CF: Rendered email
+    CF->>SG: Send email
+    SG-->>CF: Message ID
+    CF-->>FA: Email enviado
+    FA-->>U: Confirmación
+
+    Note over U,TR: 5. Gestión de Templates (CRUD)
+
+    U->>FA: Ve lista de templates
+    FA->>CF: getTemplates()
+    CF->>FS: Query company templates
+    FS-->>CF: Templates list
+    CF-->>FA: Template data
+    FA-->>U: Lista con opciones
+    U->>FA: Elimina template
+    FA->>CF: deleteTemplate(id)
+    CF->>FS: Delete document
+    FS-->>CF: Deleted
+    CF-->>FA: Success
+    FA-->>U: Template eliminado

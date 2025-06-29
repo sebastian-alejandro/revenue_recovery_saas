@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "revenue-recovery-saas"
+  },
+  "targets": {
+    "revenue-recovery-saas": {
+      "hosting": {
+        "production": [
+          "revenue-recovery-saas"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

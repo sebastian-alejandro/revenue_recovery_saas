@@ -1,0 +1,66 @@
+sequenceDiagram
+    participant U as Usuario
+    participant FA as Flutter App
+    participant CF as Cloud Functions
+    participant FS as Firestore
+    participant S as Stripe API
+    participant WH as Webhook Handler
+
+    Note over U,WH: 1. Configuración de Stripe
+
+    U->>FA: Accede a configuración Stripe
+    FA->>U: Solicita API keys
+    U->>FA: Ingresa Stripe keys
+    FA->>CF: validateStripeKeys()
+    CF->>S: Test connection
+    S-->>CF: Connection success
+    CF->>FS: Guardar en /companies/{id}
+    FS-->>CF: Keys saved
+    CF-->>FA: Configuración válida
+    FA-->>U: Stripe conectado exitosamente
+
+    Note over U,WH: 2. Procesamiento de Webhooks
+
+    S->>WH: payment_intent.payment_failed
+    WH->>WH: Validar signature
+    WH->>FS: Buscar company por webhook
+    FS-->>WH: Company data
+    WH->>FS: Crear en /payment_events
+    FS-->>WH: Event stored
+    WH->>FS: Actualizar customer status
+    FS-->>WH: Customer updated
+    WH-->>S: 200 OK
+
+    Note over U,WH: 3. Sincronización de Customers
+
+    U->>FA: Clic en "Sincronizar Stripe"
+    FA->>CF: syncStripeCustomers()
+    CF->>S: customers.list()
+    S-->>CF: Customer list
+    loop Para cada customer
+        CF->>FS: Crear/actualizar /customers
+        FS-->>CF: Customer saved
+    end
+    CF-->>FA: Sync completed
+    FA-->>U: Customers sincronizados
+
+    Note over U,WH: 4. Dashboard con Datos Reales
+
+    U->>FA: Accede a dashboard
+    FA->>CF: getDashboardData()
+    CF->>FS: Query payment_events
+    FS-->>CF: Failed payments
+    CF->>FS: Query customers
+    FS-->>CF: Customer data
+    CF->>CF: Calcular métricas
+    CF-->>FA: Dashboard metrics
+    FA-->>U: Muestra datos reales
+
+    Note over U,WH: 5. Listado de Pagos Fallidos
+
+    U->>FA: Ve lista de pagos fallidos
+    FA->>CF: getFailedPayments()
+    CF->>FS: Query payment_events donde status=failed
+    FS-->>CF: Failed payments list
+    CF-->>FA: Payment data
+    FA-->>U: Lista de pagos con detalles

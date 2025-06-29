@@ -1,0 +1,82 @@
+sequenceDiagram
+    participant U as Usuario
+    participant FA as Flutter App
+    participant CF as Cloud Functions
+    participant FS as Firestore
+    participant CE as Campaign Engine
+    participant SC as Cloud Tasks
+    participant WH as Webhook Handler
+    participant SG as SendGrid
+
+    Note over U,SG: 1. Configuración de Campaña Dunning
+
+    U->>FA: Crea nueva campaña
+    FA->>U: Formulario de configuración
+    U->>FA: Define secuencia (day 1,3,7)
+    FA->>CF: createDunningCampaign()
+    CF->>FS: Guardar en /campaigns
+    FS-->>CF: Campaign ID
+    CF-->>FA: Campaña creada
+    FA-->>U: Configuración guardada
+
+    Note over U,SG: 2. Trigger Automático por Pago Fallido
+
+    WH->>WH: Recibe payment_failed webhook
+    WH->>FS: Buscar campaigns activas
+    FS-->>WH: Active campaigns
+    WH->>CE: triggerDunningCampaign()
+    CE->>FS: Crear campaign_execution
+    FS-->>CE: Execution ID
+    CE->>SC: Schedule email (day 1)
+    SC-->>CE: Task scheduled
+    CE-->>WH: Campaign triggered
+
+    Note over U,SG: 3. Ejecución de Secuencia de Emails
+
+    SC->>CE: Execute scheduled task
+    CE->>FS: Get campaign + customer data
+    FS-->>CE: Campaign & customer info
+    CE->>FS: Get email template
+    FS-->>CE: Template data
+    CE->>CE: Render template
+    CE->>SG: Send email
+    SG-->>CE: Email sent
+    CE->>FS: Log email_sent event
+    FS-->>CE: Event logged
+    CE->>SC: Schedule next email (day 3)
+    SC-->>CE: Next task scheduled
+
+    Note over U,SG: 4. Monitoreo de Campañas Activas
+
+    U->>FA: Ve campañas activas
+    FA->>CF: getActiveCampaigns()
+    CF->>FS: Query campaign_executions
+    FS-->>CF: Active executions
+    CF->>FS: Get email_events
+    FS-->>CF: Email status
+    CF-->>FA: Campaign status data
+    FA-->>U: Lista con progreso
+
+    Note over U,SG: 5. Cancelación/Pausa Manual
+
+    U->>FA: Pausa campaña específica
+    FA->>CF: pauseCampaignExecution()
+    CF->>FS: Update execution status
+    FS-->>CF: Status updated
+    CF->>SC: Cancel pending tasks
+    SC-->>CF: Tasks cancelled
+    CF-->>FA: Campaign pausada
+    FA-->>U: Confirmación
+
+    Note over U,SG: 6. Recovery Success - Stop Campaign
+
+    SG->>WH: Payment successful webhook
+    WH->>FS: Find related campaign_execution
+    FS-->>WH: Execution data
+    WH->>CE: stopCampaignExecution()
+    CE->>FS: Update status to 'completed'
+    FS-->>CE: Status updated
+    CE->>SC: Cancel pending emails
+    SC-->>CE: Tasks cancelled
+    CE->>FS: Log recovery_success
+    FS-->>CE: Success logged

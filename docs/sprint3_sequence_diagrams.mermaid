@@ -1,0 +1,65 @@
+sequenceDiagram
+    participant U as Usuario
+    participant FA as Flutter App
+    participant CF as Cloud Functions
+    participant FS as Firestore
+    participant MC as Metrics Calculator
+
+    Note over U,MC: 1. Carga de Dashboard con Métricas
+
+    U->>FA: Accede a dashboard
+    FA->>CF: getDashboardMetrics()
+    CF->>MC: calculateRecoveryMetrics()
+    MC->>FS: Query payment_events
+    FS-->>MC: Payment data
+    MC->>FS: Query recovery_events
+    FS-->>MC: Recovery data
+    MC->>MC: Calcular recovery rate
+    MC->>MC: Calcular revenue at risk
+    MC-->>CF: Metrics object
+    CF-->>FA: Dashboard data
+    FA-->>U: Muestra charts y KPIs
+
+    Note over U,MC: 2. Filtros de Fecha
+
+    U->>FA: Selecciona rango de fechas
+    FA->>CF: getMetricsByDateRange()
+    CF->>MC: calculateMetricsForPeriod()
+    MC->>FS: Query con filtros de fecha
+    FS-->>MC: Filtered data
+    MC->>MC: Recalcular métricas
+    MC-->>CF: Updated metrics
+    CF-->>FA: Filtered dashboard data
+    FA-->>U: Dashboard actualizado
+
+    Note over U,MC: 3. Drill-down en Métricas
+
+    U->>FA: Clic en metric card
+    FA->>CF: getMetricDetails()
+    CF->>FS: Query detailed breakdown
+    FS-->>CF: Granular data
+    CF->>CF: Agrupar por categorías
+    CF-->>FA: Detailed view data
+    FA-->>U: Modal con breakdown
+
+    Note over U,MC: 4. Lista de Pagos Fallidos con Estado
+
+    U->>FA: Ve failed payments list
+    FA->>CF: getFailedPaymentsWithStatus()
+    CF->>FS: Query payment_events + customers
+    FS-->>CF: Payments con customer info
+    CF->>FS: Query recovery attempts
+    FS-->>CF: Recovery status
+    CF->>CF: Enriquecer con estado
+    CF-->>FA: Enhanced payment list
+    FA-->>U: Lista con recovery status
+
+    Note over U,MC: 5. Actualización en Tiempo Real
+
+    FS->>CF: Firestore trigger (nuevo payment)
+    CF->>MC: recalculateMetrics()
+    MC->>FS: Update metrics collection
+    FS-->>MC: Metrics updated
+    MC->>FA: Push notification (FCM)
+    FA->>FA: Update dashboard state
+    FA-->>U: Dashboard actualizado automáticamente

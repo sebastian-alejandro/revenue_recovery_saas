@@ -1,0 +1,86 @@
+sequenceDiagram
+    participant U as Usuario
+    participant FA as Flutter App
+    participant CF as Cloud Functions
+    participant FS as Firestore
+    participant AE as Analytics Engine
+    participant SG as SendGrid
+    participant WH as Webhook Handler
+
+    Note over U,WH: 1. Analytics de Performance de Campañas
+
+    U->>FA: Ve analytics de campaña
+    FA->>CF: getCampaignAnalytics(campaignId)
+    CF->>AE: calculateCampaignMetrics()
+    AE->>FS: Query email_events
+    FS-->>AE: Email events data
+    AE->>FS: Query recovery_events
+    FS-->>AE: Recovery data
+    AE->>AE: Calculate open/click rates
+    AE-->>CF: Analytics data
+    CF-->>FA: Campaign metrics
+    FA-->>U: Charts y KPIs
+
+    Note over U,WH: 2. Email Event Tracking
+
+    SG->>WH: Email opened webhook
+    WH->>FS: Log email_event (opened)
+    FS-->>WH: Event stored
+    WH->>AE: updateRealTimeMetrics()
+    AE->>FS: Update campaign metrics
+    FS-->>AE: Metrics updated
+    
+    SG->>WH: Email clicked webhook
+    WH->>FS: Log email_event (clicked)
+    FS-->>WH: Event stored
+    WH->>FA: Push notification
+    FA-->>U: Real-time update
+
+    Note over U,WH: 3. Recovery Attribution
+
+    WH->>WH: Payment success webhook
+    WH->>FS: Find related campaign_execution
+    FS-->>WH: Campaign data
+    WH->>AE: attributeRecovery()
+    AE->>FS: Link payment to campaign
+    FS-->>AE: Attribution saved
+    AE->>FS: Update recovery metrics
+    FS-->>AE: Metrics updated
+    AE-->>WH: Attribution complete
+
+    Note over U,WH: 4. ROI Calculator
+
+    U->>FA: Accede a ROI calculator
+    FA->>CF: calculateROI()
+    CF->>AE: getROIMetrics()
+    AE->>FS: Query campaign costs
+    FS-->>AE: Cost data
+    AE->>FS: Query recovered revenue
+    FS-->>AE: Revenue data
+    AE->>AE: Calculate ROI = (Revenue - Cost) / Cost
+    AE-->>CF: ROI metrics
+    CF-->>FA: ROI data
+    FA-->>U: ROI dashboard
+
+    Note over U,WH: 5. Performance Comparison
+
+    U->>FA: Compara campañas
+    FA->>CF: compareCampaigns(ids[])
+    CF->>AE: getCampaignComparison()
+    AE->>FS: Query multiple campaigns
+    FS-->>AE: Campaign data
+    AE->>AE: Calculate comparative metrics
+    AE-->>CF: Comparison data
+    CF-->>FA: Comparison results
+    FA-->>U: Side-by-side comparison
+
+    Note over U,WH: 6. Automated Reporting
+
+    AE->>AE: Weekly report trigger
+    AE->>FS: Query period metrics
+    FS-->>AE: Performance data
+    AE->>AE: Generate report
+    AE->>SG: Send summary email
+    SG-->>AE: Email sent
+    AE->>FS: Log report sent
+    FS-->>AE: Report logged

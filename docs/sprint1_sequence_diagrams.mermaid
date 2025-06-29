@@ -1,0 +1,50 @@
+sequenceDiagram
+    participant U as Usuario
+    participant FA as Flutter App
+    participant Auth as Firebase Auth
+    participant FS as Firestore
+    participant CF as Cloud Functions
+
+    Note over U,CF: 1. Registro de Usuario
+    
+    U->>FA: Accede a /register
+    FA->>Auth: createUserWithEmailAndPassword()
+    Auth-->>FA: User Token
+    FA->>CF: createUserProfile()
+    CF->>FS: Crear documento en /users
+    FS-->>CF: Success
+    CF-->>FA: Profile Created
+    FA-->>U: Redirige a onboarding
+
+    Note over U,CF: 2. Login de Usuario
+    
+    U->>FA: Ingresa credenciales
+    FA->>Auth: signInWithEmailAndPassword()
+    Auth-->>FA: User Token
+    FA->>CF: getUserProfile()
+    CF->>FS: Query user document
+    FS-->>CF: User data
+    CF-->>FA: Profile data
+    FA-->>U: Muestra dashboard
+
+    Note over U,CF: 3. Setup Inicial del Proyecto
+    
+    U->>FA: Completa onboarding
+    FA->>CF: createCompany()
+    CF->>FS: Crear documento en /companies
+    FS-->>CF: Company ID
+    CF->>FS: Actualizar user con companyId
+    FS-->>CF: Success
+    CF-->>FA: Company created
+    FA-->>U: Dashboard inicializado
+
+    Note over U,CF: 4. Navegación en Dashboard
+    
+    U->>FA: Navega a sección
+    FA->>Auth: Verificar token
+    Auth-->>FA: Token válido
+    FA->>CF: getInitialData()
+    CF->>FS: Query placeholder data
+    FS-->>CF: Empty collections
+    CF-->>FA: Empty state data
+    FA-->>U: Muestra dashboard vacío
